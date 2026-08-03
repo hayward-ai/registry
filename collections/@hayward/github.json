@@ -1,0 +1,719 @@
+{
+  "schemaVersion": 1,
+  "kind": "tool-collection",
+  "name": "@hayward/github",
+  "scope": "@hayward",
+  "shortName": "github",
+  "manifest": {
+    "$schema": "https://hayward-ai.github.io/schemas/tool-manifest.schema.json",
+    "kind": "tool-collection",
+    "schemaVersion": 1,
+    "name": "@hayward/github",
+    "displayName": "GitHub",
+    "author": "Hayward",
+    "category": "Version Control",
+    "description": "Manage work on GitHub: browse, create, and comment on issues and pull requests, and merge them when they’re ready.",
+    "icon": "data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%20fill%3D'none'%20stroke%3D'%2371717a'%20stroke-width%3D'2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D'M15%2022v-4a4.8%204.8%200%200%200-1-3.5c3%200%206-2%206-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35%200-3.5%200%200-1%200-3%201.5-2.64-.5-5.36-.5-8%200C6%202%205%202%205%202c-.3%201.15-.3%202.35%200%203.5A5.403%205.403%200%200%200%204%209c0%203.5%203%205.5%206%205.5-.39.49-.68%201.05-.85%201.65-.17.6-.22%201.23-.15%201.85v4'%2F%3E%3Cpath%20d%3D'M9%2018c-4.51%202-5-2-7-2'%2F%3E%3C%2Fsvg%3E",
+    "configSchema": {
+      "type": "object",
+      "required": [
+        "GITHUB_TOKEN"
+      ],
+      "properties": {
+        "GITHUB_TOKEN": {
+          "type": "string",
+          "secret": true,
+          "description": "A GitHub personal access token, sent as `Authorization: Bearer`. Prefer a fine-grained token limited to the specific repositories this agent should touch, granting 'Issues: Read and write' and 'Pull requests: Read and write' (add 'Contents: Read' for github_pr_diff on a private repo). Required for every call — this tool makes no unauthenticated requests."
+        },
+        "GITHUB_REPO": {
+          "type": "string",
+          "description": "The repository every export operates on, as 'owner/name' (e.g. 'octocat/hello-world'). When set, the model is never asked for a repository and any 'repo' argument it supplies is ignored. When omitted, every call requires an explicit 'repo' argument, and the only limit on which repositories the model can reach is GITHUB_TOKEN's own scope."
+        }
+      }
+    },
+    "tools": [
+      {
+        "name": "github_issue_list",
+        "displayName": "List issues",
+        "exportName": "issue-list",
+        "description": "List issues, newest first. Pull requests are excluded — use github_pr_list for those. Bodies are truncated to 500 characters; use github_issue_get for the full body.",
+        "argumentsSchema": {
+          "type": "object",
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "Target repository as 'owner/name'."
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "open",
+                "closed",
+                "all"
+              ],
+              "description": "Which issues to return. Defaults to 'open'."
+            },
+            "labels": {
+              "type": "string",
+              "description": "Comma-separated label names; an issue must carry all of them to match (e.g. 'bug,p1')."
+            },
+            "assignee": {
+              "type": "string",
+              "description": "Filter to issues assigned to this username. Use 'none' for unassigned issues, '*' for any assignee."
+            },
+            "creator": {
+              "type": "string",
+              "description": "Filter to issues opened by this username."
+            },
+            "sort": {
+              "type": "string",
+              "enum": [
+                "created",
+                "updated",
+                "comments"
+              ],
+              "description": "Sort field. Defaults to 'created'."
+            },
+            "direction": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "Sort direction. Defaults to 'desc'."
+            },
+            "since": {
+              "type": "string",
+              "description": "Only issues updated at or after this ISO 8601 timestamp (e.g. '2026-07-01T00:00:00Z')."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Maximum issues to return, 1-100. Defaults to 20."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based page number, for paging past `limit` results."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "repo": "GITHUB_REPO"
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.github.com"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "github_issue_get",
+        "displayName": "Get issue",
+        "exportName": "issue-get",
+        "description": "Read one issue in full — title, body, state, labels, assignees, timestamps — optionally with its comment thread. Fails if the number is a pull request; use github_pr_get for those.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "number"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "Target repository as 'owner/name'."
+            },
+            "number": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The issue number (the '#123' in the UI, not the internal id)."
+            },
+            "include_comments": {
+              "type": "boolean",
+              "description": "Also fetch the issue's comment thread (up to 50 comments). Defaults to false — leave it off unless the discussion matters, since comments often outweigh the issue itself."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "repo": "GITHUB_REPO"
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.github.com"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "github_issue_create",
+        "displayName": "Create issue",
+        "exportName": "issue-create",
+        "description": "Open a new issue. Returns the created issue including the number it was assigned.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "title"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "Target repository as 'owner/name'."
+            },
+            "title": {
+              "type": "string",
+              "description": "The issue title."
+            },
+            "body": {
+              "type": "string",
+              "description": "The issue body, as GitHub-flavored Markdown."
+            },
+            "labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Label names to apply. Labels that don't already exist in the repository are created."
+            },
+            "assignees": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Usernames to assign. Silently ignored by GitHub for users without push access to the repository."
+            },
+            "milestone": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Milestone number to attach the issue to."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "repo": "GITHUB_REPO"
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.github.com"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "github_issue_update",
+        "displayName": "Update issue",
+        "exportName": "issue-update",
+        "description": "Edit an issue: retitle it, rewrite its body, close or reopen it, or change labels/assignees. This is how an issue gets closed — set `state` to 'closed'. Only the fields supplied are changed, but `labels` and `assignees` REPLACE the existing sets rather than adding to them, so read the issue first if you mean to append.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "number"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "Target repository as 'owner/name'."
+            },
+            "number": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The issue number to update."
+            },
+            "title": {
+              "type": "string",
+              "description": "New title. Omit to leave unchanged."
+            },
+            "body": {
+              "type": "string",
+              "description": "New body, replacing the existing one entirely. Omit to leave unchanged."
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "open",
+                "closed"
+              ],
+              "description": "Set to 'closed' to close the issue, 'open' to reopen it."
+            },
+            "state_reason": {
+              "type": "string",
+              "enum": [
+                "completed",
+                "not_planned",
+                "reopened"
+              ],
+              "description": "Why the state changed — 'completed' or 'not_planned' when closing, 'reopened' when reopening. Worth setting whenever `state` is: it's what distinguishes a fixed issue from a dismissed one in GitHub's UI."
+            },
+            "labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The issue's complete new label set, replacing all existing labels. Pass [] to clear them."
+            },
+            "assignees": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The issue's complete new assignee set, replacing all existing assignees. Pass [] to unassign everyone."
+            },
+            "milestone": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Milestone number, or null to detach the milestone."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "repo": "GITHUB_REPO"
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.github.com"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "github_issue_comment",
+        "displayName": "Comment on issue",
+        "exportName": "issue-comment",
+        "description": "Post a comment on an issue. Adds to the thread; it never edits an existing comment.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "number",
+            "body"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "Target repository as 'owner/name'."
+            },
+            "number": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The issue number to comment on."
+            },
+            "body": {
+              "type": "string",
+              "description": "The comment body, as GitHub-flavored Markdown."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "repo": "GITHUB_REPO"
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.github.com"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "github_pr_list",
+        "displayName": "List pull requests",
+        "exportName": "pr-list",
+        "description": "List pull requests. Bodies are truncated to 500 characters and mergeability is not reported — use github_pr_get for either.",
+        "argumentsSchema": {
+          "type": "object",
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "Target repository as 'owner/name'."
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "open",
+                "closed",
+                "all"
+              ],
+              "description": "Which pull requests to return. Defaults to 'open'. Note 'closed' includes merged ones — check each result's `merged` field."
+            },
+            "head": {
+              "type": "string",
+              "description": "Filter by source branch, as 'user:branch' (e.g. 'octocat:fix-typo')."
+            },
+            "base": {
+              "type": "string",
+              "description": "Filter by target branch name (e.g. 'main')."
+            },
+            "sort": {
+              "type": "string",
+              "enum": [
+                "created",
+                "updated",
+                "popularity",
+                "long-running"
+              ],
+              "description": "Sort field. Defaults to 'created'."
+            },
+            "direction": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "Sort direction. Defaults to 'desc'."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Maximum pull requests to return, 1-100. Defaults to 20."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based page number."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "repo": "GITHUB_REPO"
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.github.com"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "github_pr_get",
+        "displayName": "Get pull request",
+        "exportName": "pr-get",
+        "description": "Read one pull request in full — description, branches, review state, merge state, change counts — optionally with its conversation thread. `mergeable` can come back null on a first read, before GitHub has computed it; read again rather than treating null as 'not mergeable'.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "number"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "Target repository as 'owner/name'."
+            },
+            "number": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The pull request number."
+            },
+            "include_comments": {
+              "type": "boolean",
+              "description": "Also fetch the PR's conversation comments (up to 50). Does not include line-anchored review comments. Defaults to false."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "repo": "GITHUB_REPO"
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.github.com"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "github_pr_create",
+        "displayName": "Create pull request",
+        "exportName": "pr-create",
+        "description": "Open a pull request from an existing branch. The head branch must already be pushed with at least one commit that isn't on base, or GitHub rejects the request with 'No commits between X and Y' — the usual sign the branch wasn't pushed first. Use the `git` tool collection to push.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "title",
+            "head",
+            "base"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "Target repository as 'owner/name'."
+            },
+            "title": {
+              "type": "string",
+              "description": "The pull request title."
+            },
+            "head": {
+              "type": "string",
+              "description": "The branch containing the changes. A plain branch name for a same-repository PR (e.g. 'fix-typo'), or 'user:branch' when opening from a fork."
+            },
+            "base": {
+              "type": "string",
+              "description": "The branch to merge into, e.g. 'main'."
+            },
+            "body": {
+              "type": "string",
+              "description": "The pull request description, as GitHub-flavored Markdown."
+            },
+            "draft": {
+              "type": "boolean",
+              "description": "Open as a draft, which cannot be merged until marked ready. Defaults to false."
+            },
+            "maintainer_can_modify": {
+              "type": "boolean",
+              "description": "Let upstream maintainers push to the head branch. Only meaningful for a PR opened from a fork."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "repo": "GITHUB_REPO"
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.github.com"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "github_pr_update",
+        "displayName": "Update pull request",
+        "exportName": "pr-update",
+        "description": "Edit an open pull request: retitle it, rewrite its description, retarget its base branch, or close/reopen it. Only the fields supplied are changed. Closing a PR here does NOT merge it — use github_pr_merge.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "number"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "Target repository as 'owner/name'."
+            },
+            "number": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The pull request number to update."
+            },
+            "title": {
+              "type": "string",
+              "description": "New title. Omit to leave unchanged."
+            },
+            "body": {
+              "type": "string",
+              "description": "New description, replacing the existing one entirely. Omit to leave unchanged."
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "open",
+                "closed"
+              ],
+              "description": "Set to 'closed' to close the pull request without merging, 'open' to reopen it."
+            },
+            "base": {
+              "type": "string",
+              "description": "Retarget the pull request at a different base branch."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "repo": "GITHUB_REPO"
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.github.com"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "github_pr_comment",
+        "displayName": "Comment on pull request",
+        "exportName": "pr-comment",
+        "description": "Post a comment on a pull request's conversation thread — a general comment on the PR, not a review and not a line-anchored code comment.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "number",
+            "body"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "Target repository as 'owner/name'."
+            },
+            "number": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The pull request number to comment on."
+            },
+            "body": {
+              "type": "string",
+              "description": "The comment body, as GitHub-flavored Markdown."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "repo": "GITHUB_REPO"
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.github.com"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "github_pr_merge",
+        "displayName": "Merge pull request",
+        "exportName": "pr-merge",
+        "description": "Merge a pull request. Irreversible in practice, and subject to branch protection rules GitHub enforces server-side (required reviews and status checks are not bypassed by this call). Check `mergeable`/`mergeable_state` with github_pr_get first. Pass `sha` to refuse the merge if the branch has moved since you read it.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "number"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "Target repository as 'owner/name'."
+            },
+            "number": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The pull request number to merge."
+            },
+            "merge_method": {
+              "type": "string",
+              "enum": [
+                "merge",
+                "squash",
+                "rebase"
+              ],
+              "description": "How to merge. Defaults to 'merge' (a merge commit). A method the repository has disabled is rejected by GitHub."
+            },
+            "commit_title": {
+              "type": "string",
+              "description": "Title for the merge commit. Defaults to GitHub's own generated title."
+            },
+            "commit_message": {
+              "type": "string",
+              "description": "Extra detail appended to the merge commit message."
+            },
+            "sha": {
+              "type": "string",
+              "description": "The head commit SHA this merge is intended for (from github_pr_get's `head_sha`). GitHub rejects the merge if the branch has advanced past it — pass it whenever you have it, so a merge can't silently land changes you never saw."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "repo": "GITHUB_REPO"
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.github.com"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "github_pr_diff",
+        "displayName": "Pull request diff",
+        "exportName": "pr-diff",
+        "description": "List the files a pull request changes, with each file's diff hunk. 50 files per page, each hunk truncated at 4000 characters, so a large PR gives an outline rather than a complete diff — watch `more_files_possible` and each patch's truncation marker. A file's `patch` is null when GitHub omits it (binary, or too large to diff).",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "number"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "Target repository as 'owner/name'."
+            },
+            "number": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The pull request number."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based page number, 50 files per page. Use it when `more_files_possible` came back true; github_pr_get's `changed_files` tells you how many there are in total."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "repo": "GITHUB_REPO"
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.github.com"
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "oci": {
+    "registry": "ghcr.io",
+    "path": "hayward-ai/hayward-tools/github"
+  },
+  "latestVersion": "0.1.0",
+  "versions": [
+    {
+      "version": "0.1.0",
+      "contentDigest": "sha256:f77fcfc6d69197cc85ca2126c4a69f57b0a62caab8803a0d8cd566dd278b0f26",
+      "manifestDigest": "sha256:e92b9b7a13268dacdcec3dc398db77a91d442204d551210e02ae0d33123de190",
+      "reference": "ghcr.io/hayward-ai/hayward-tools/github:0.1.0",
+      "publishedAt": "2026-08-03T02:13:48.541Z"
+    }
+  ]
+}

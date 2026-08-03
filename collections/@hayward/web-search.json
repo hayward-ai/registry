@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "kind": "tool-collection",
+  "name": "@hayward/web-search",
+  "scope": "@hayward",
+  "shortName": "web-search",
+  "manifest": {
+    "$schema": "https://hayward-ai.github.io/schemas/tool-manifest.schema.json",
+    "kind": "tool-collection",
+    "schemaVersion": 1,
+    "name": "@hayward/web-search",
+    "displayName": "Web Search",
+    "author": "Hayward",
+    "category": "Web",
+    "description": "Search the web and get back relevant, up-to-date results.",
+    "icon": "data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%20fill%3D'none'%20stroke%3D'%2371717a'%20stroke-width%3D'2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Ccircle%20cx%3D'11'%20cy%3D'11'%20r%3D'8'%2F%3E%3Cpath%20d%3D'm21%2021-4.3-4.3'%2F%3E%3C%2Fsvg%3E",
+    "configSchema": {
+      "type": "object",
+      "required": [
+        "TAVILY_API_KEY"
+      ],
+      "properties": {
+        "TAVILY_API_KEY": {
+          "type": "string",
+          "secret": true,
+          "description": "API key for the Tavily Search API (https://app.tavily.com) — required for every call."
+        }
+      }
+    },
+    "tools": [
+      {
+        "name": "web_search",
+        "displayName": "Web search",
+        "exportName": "call",
+        "description": "Search the web and return relevant results (title, url, content snippet, relevance score), optionally with a synthesized answer.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "The search query."
+            },
+            "max_results": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "description": "Maximum number of results to return. Defaults to 5."
+            },
+            "search_depth": {
+              "type": "string",
+              "enum": [
+                "basic",
+                "advanced"
+              ],
+              "description": "'advanced' retrieves more thoroughly but costs more API credits. Defaults to 'basic'."
+            },
+            "include_answer": {
+              "type": "boolean",
+              "description": "Whether to also return an LLM-synthesized answer to the query. Defaults to false."
+            },
+            "topic": {
+              "type": "string",
+              "enum": [
+                "general",
+                "news"
+              ],
+              "description": "Search category. Defaults to 'general'."
+            }
+          }
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "api.tavily.com"
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "oci": {
+    "registry": "ghcr.io",
+    "path": "hayward-ai/hayward-tools/web-search"
+  },
+  "latestVersion": "0.1.0",
+  "versions": [
+    {
+      "version": "0.1.0",
+      "contentDigest": "sha256:6d7128cd48b70548066b77c849a05107d655a309b44a2627db9abb3fa58f5a39",
+      "manifestDigest": "sha256:927452abc97f3a88e1a51a071dc7c97757d2ae7a58498de63ac9258319898ce4",
+      "reference": "ghcr.io/hayward-ai/hayward-tools/web-search:0.1.0",
+      "publishedAt": "2026-08-03T02:13:48.766Z"
+    }
+  ]
+}

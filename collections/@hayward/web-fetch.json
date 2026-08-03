@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "kind": "tool-collection",
+  "name": "@hayward/web-fetch",
+  "scope": "@hayward",
+  "shortName": "web-fetch",
+  "manifest": {
+    "$schema": "https://hayward-ai.github.io/schemas/tool-manifest.schema.json",
+    "kind": "tool-collection",
+    "schemaVersion": 1,
+    "name": "@hayward/web-fetch",
+    "displayName": "Web Fetch",
+    "author": "Hayward",
+    "category": "Web",
+    "description": "Open a web page and read its content as clean, readable text.",
+    "icon": "data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%20fill%3D'none'%20stroke%3D'%2371717a'%20stroke-width%3D'2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Ccircle%20cx%3D'12'%20cy%3D'12'%20r%3D'10'%2F%3E%3Cpath%20d%3D'M12%202a14.5%2014.5%200%200%200%200%2020%2014.5%2014.5%200%200%200%200-20'%2F%3E%3Cpath%20d%3D'M2%2012h20'%2F%3E%3C%2Fsvg%3E",
+    "tools": [
+      {
+        "name": "web_fetch",
+        "displayName": "Fetch web page",
+        "exportName": "call",
+        "description": "Fetch an http/https URL and return its content as text. HTML is converted to markdown (links and images resolved to absolute URLs so they can be fetched directly, scripts/styles stripped); JSON and plain text are returned verbatim. Follows redirects, and returns the final URL, the HTTP status, the page title, and the content. Binary responses (images, archives, PDFs) return an error. Long pages are truncated — raise max_length to see more.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "url"
+          ],
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "The absolute http:// or https:// URL to fetch."
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "markdown",
+                "text",
+                "html"
+              ],
+              "description": "Output format for HTML pages: 'markdown' (default) preserves headings, lists, tables and links; 'text' strips all markup, for prose-heavy pages; 'html' returns the raw source, which is expensive — use only when the markup itself matters. Ignored for non-HTML responses, which are always verbatim."
+            },
+            "max_length": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500000,
+              "description": "Maximum characters of content to return. Defaults to 50000. Content longer than this is truncated with a marker noting the full length."
+            }
+          }
+        },
+        "scopes": {
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "*"
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "oci": {
+    "registry": "ghcr.io",
+    "path": "hayward-ai/hayward-tools/web-fetch"
+  },
+  "latestVersion": "0.1.0",
+  "versions": [
+    {
+      "version": "0.1.0",
+      "contentDigest": "sha256:6cf41ba2cf7695bfeea39ed20ab6f4a1204c1e0b1f41b0bf530a5fb42ce84dde",
+      "manifestDigest": "sha256:3083a9b3c572e07c9764d965a4e57294497eb04d0a40d8448ccfda924e0faeff",
+      "reference": "ghcr.io/hayward-ai/hayward-tools/web-fetch:0.1.0",
+      "publishedAt": "2026-08-03T02:13:48.656Z"
+    }
+  ]
+}

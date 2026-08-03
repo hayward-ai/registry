@@ -1,0 +1,413 @@
+{
+  "schemaVersion": 1,
+  "kind": "tool-collection",
+  "name": "@hayward/git",
+  "scope": "@hayward",
+  "shortName": "git",
+  "manifest": {
+    "$schema": "https://hayward-ai.github.io/schemas/tool-manifest.schema.json",
+    "kind": "tool-collection",
+    "schemaVersion": 1,
+    "name": "@hayward/git",
+    "displayName": "Git",
+    "author": "Hayward",
+    "category": "Version Control",
+    "description": "Work with Git repositories: clone a project, switch or start a branch, then review, stage, commit, and push changes.",
+    "icon": "data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%20fill%3D'none'%20stroke%3D'%2371717a'%20stroke-width%3D'2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cline%20x1%3D'6'%20x2%3D'6'%20y1%3D'3'%20y2%3D'15'%2F%3E%3Ccircle%20cx%3D'18'%20cy%3D'6'%20r%3D'3'%2F%3E%3Ccircle%20cx%3D'6'%20cy%3D'18'%20r%3D'3'%2F%3E%3Cpath%20d%3D'M18%209a9%209%200%200%201-9%209'%2F%3E%3C%2Fsvg%3E",
+    "configSchema": {
+      "type": "object",
+      "properties": {
+        "GIT_REPO_URL": {
+          "type": "string",
+          "description": "The remote repository's clone URL. The scheme selects the transport: 'git@github.com:org/repo.git' or 'ssh://git@github.com/org/repo.git' for SSH, 'https://github.com/org/repo.git' for HTTP(S). When set, pins git_clone/git_push to this repo and any 'url' argument the LLM supplies to git_clone is ignored. When omitted, git_clone requires a 'url' argument at call time and git_push targets whatever 'origin' remote was recorded when git_clone ran."
+        },
+        "GIT_SSH_PRIVATE_KEY": {
+          "type": "string",
+          "secret": true,
+          "multiline": true,
+          "description": "The SSH private key to authenticate with, in OpenSSH or PEM format (e.g. the contents of an id_ed25519 file). Required for git_clone/git_push against an SSH remote — there is no anonymous SSH auth. Not used at all by https:// or http:// remotes, which authenticate with GIT_HTTP_TOKEN instead. Paste it exactly as it appears in the key file, newlines included — the PEM/OpenSSH format is line-oriented, and a value with its newlines collapsed (e.g. from a single-line input) will fail to parse."
+        },
+        "GIT_SSH_PUBLIC_KEY": {
+          "type": "string",
+          "multiline": true,
+          "description": "The public key matching GIT_SSH_PRIVATE_KEY (e.g. the contents of an id_ed25519.pub file). Optional — libssh2 can derive the public key from the private key, but supplying it explicitly avoids that extra step."
+        },
+        "GIT_SSH_PASSPHRASE": {
+          "type": "string",
+          "secret": true,
+          "description": "Passphrase for GIT_SSH_PRIVATE_KEY, if it's encrypted. Omit for an unencrypted key."
+        },
+        "GIT_SSH_USERNAME": {
+          "type": "string",
+          "description": "SSH username to authenticate as. Defaults to 'git' (the conventional git-over-SSH username on GitHub/GitLab/Bitbucket) if omitted and the URL doesn't specify one."
+        },
+        "GIT_SSH_KNOWN_HOSTS": {
+          "type": "string",
+          "multiline": true,
+          "description": "Additional trusted SSH host keys, beyond the bundled github.com/gitlab.com/bitbucket.org entries — one 'hostname SHA256:<fingerprint>' pair per line, matching the format `ssh-keygen -lf` prints (e.g. from `ssh-keyscan -t ed25519 <host> | ssh-keygen -lf -`). Required for any other SSH host unless GIT_SSH_STRICT_HOST_KEY_CHECKING is disabled. Has no effect on https:// remotes, whose certificates the host's TLS stack verifies."
+        },
+        "GIT_SSH_STRICT_HOST_KEY_CHECKING": {
+          "type": "string",
+          "description": "Set to the literal string 'false' to accept any SSH host key, bypassing verification entirely. Risky (no protection against a MITM'd or spoofed host) — prefer adding the real host key to GIT_SSH_KNOWN_HOSTS instead. Any value other than 'false' (including unset) keeps strict checking on. SSH only: it cannot loosen (or tighten) HTTPS certificate verification, which the host performs."
+        },
+        "GIT_HTTP_TOKEN": {
+          "type": "string",
+          "secret": true,
+          "description": "Access token for https:// and http:// remotes, e.g. a GitHub personal access token or a GitLab project token. Sent as an HTTP Basic Authorization header. Optional: public repositories clone over HTTPS with no credential configured. Ignored entirely by SSH remotes, which use GIT_SSH_PRIVATE_KEY."
+        },
+        "GIT_HTTP_USERNAME": {
+          "type": "string",
+          "description": "Username paired with GIT_HTTP_TOKEN in the Basic auth header. Defaults to 'git', which GitHub and GitLab both accept alongside a token; Bitbucket wants the real account name, which is what this is for."
+        },
+        "GIT_HTTP_ALLOW_CLEARTEXT_CREDENTIALS": {
+          "type": "string",
+          "description": "Set to the literal string 'true' to permit sending GIT_HTTP_TOKEN over a plain http:// (unencrypted) remote. Off by default: a token on an http:// URL would cross the network in the clear, so that combination fails with an explanatory error instead. Anonymous http:// cloning needs no opt-in and is unaffected."
+        }
+      }
+    },
+    "tools": [
+      {
+        "name": "git_clone",
+        "displayName": "Clone repository",
+        "exportName": "git-clone",
+        "description": "Clone a remote repository into the workspace root. Fails if the workspace already contains a repository. Accepts SSH remotes ('ssh://...', 'user@host:path') and HTTP(S) ones ('https://...', 'http://...'); the URL's scheme selects the transport, and credentials for it are configured on the collection.",
+        "argumentsSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "The remote repository's clone URL — SSH ('git@github.com:org/repo.git', 'ssh://...') or HTTP(S) ('https://github.com/org/repo.git')."
+            },
+            "depth": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Shallow-clone depth. Omit for a full clone."
+            },
+            "branch": {
+              "type": "string",
+              "description": "Branch to check out after cloning, as a plain name ('develop', not 'refs/heads/develop'). Omit for the remote's default branch. Fails if the remote has no branch by this name — it never falls back to the default."
+            }
+          }
+        },
+        "configShadowedArguments": {
+          "url": "GIT_REPO_URL"
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "readwrite"
+                }
+              ]
+            }
+          },
+          "sockets": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "*"
+              ],
+              "allowedPorts": [
+                22
+              ],
+              "protocols": [
+                "tcp"
+              ]
+            }
+          },
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "*"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "git_status",
+        "displayName": "Git status",
+        "exportName": "git-status",
+        "description": "Report the working-tree status. Without `filepath`, lists every changed file (added/modified/deleted, staged or not; '*'-prefixed when staged and unstaged disagree); with one, reports that file's status string.",
+        "argumentsSchema": {
+          "type": "object",
+          "properties": {
+            "filepath": {
+              "type": "string",
+              "description": "Workspace-relative path to check. Omit to list every changed file."
+            }
+          }
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "read"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "git_add",
+        "displayName": "Stage changes",
+        "exportName": "git-add",
+        "description": "Stage a file's current contents.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "filepath"
+          ],
+          "properties": {
+            "filepath": {
+              "type": "string",
+              "description": "Workspace-relative path to stage."
+            }
+          }
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "readwrite"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "git_commit",
+        "displayName": "Commit changes",
+        "exportName": "git-commit",
+        "description": "Commit everything currently staged. Author defaults to a generic 'agent' identity if not supplied.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "message"
+          ],
+          "properties": {
+            "message": {
+              "type": "string",
+              "description": "Commit message."
+            },
+            "author": {
+              "type": "object",
+              "description": "Optional commit author override.",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "readwrite"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "git_push",
+        "displayName": "Push commits",
+        "exportName": "git-push",
+        "description": "Push the current branch to the 'origin' remote, over SSH or HTTP(S) as that remote's URL scheme selects.",
+        "argumentsSchema": {
+          "type": "object",
+          "properties": {}
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "readwrite"
+                }
+              ]
+            }
+          },
+          "sockets": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "*"
+              ],
+              "allowedPorts": [
+                22
+              ],
+              "protocols": [
+                "tcp"
+              ]
+            }
+          },
+          "http-client": {
+            "enabled": true,
+            "limits": {
+              "allowedHosts": [
+                "*"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "git_log",
+        "displayName": "Commit history",
+        "exportName": "git-log",
+        "description": "List recent commits on the current branch (oid, message, author).",
+        "argumentsSchema": {
+          "type": "object",
+          "properties": {
+            "depth": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum number of commits to return. Defaults to 10."
+            }
+          }
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "read"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "git_diff",
+        "displayName": "Show diff",
+        "exportName": "git-diff",
+        "description": "List which files changed between HEAD and the working tree (added/modified/deleted/renamed/typechange), each with a unified-diff patch for text files; binary files report binary:true instead.",
+        "argumentsSchema": {
+          "type": "object",
+          "properties": {}
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "read"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "git_branch",
+        "displayName": "List branches",
+        "exportName": "git-branch",
+        "description": "List branches, each with its name, tip commit, and whether it's the one currently checked out. Reports the current branch separately, or detached:true when HEAD isn't on a branch at all (commits would land on no branch, and git_push would have nothing to push). Read-only — use git_checkout to create a branch or switch to one.",
+        "argumentsSchema": {
+          "type": "object",
+          "properties": {
+            "remote": {
+              "type": "boolean",
+              "description": "Include remote-tracking branches ('origin/main', marked remote:true) alongside local ones. Defaults to false, i.e. local branches only. These reflect the last fetch — after a shallow or single-branch clone the remote's other branches won't appear."
+            }
+          }
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "read"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "git_checkout",
+        "displayName": "Switch branch",
+        "exportName": "git-checkout",
+        "description": "Switch the working tree to a branch, creating it first when `create` is set. Without `create`, a branch that exists only on the remote is checked out as a local branch tracking origin/<name>. Fails rather than overwriting if uncommitted changes conflict with the branch being switched to — commit or stage them first. git_push pushes whichever branch is current, so this is what decides where commits land.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "branch"
+          ],
+          "properties": {
+            "branch": {
+              "type": "string",
+              "description": "Branch to switch to, as a plain name ('feature/login'). An 'origin/' prefix is accepted and stripped — either form means the same local branch."
+            },
+            "create": {
+              "type": "boolean",
+              "description": "Create the branch before switching to it, like 'git checkout -b'. Fails if a local branch of that name already exists; call again without this to switch to it instead. Defaults to false."
+            },
+            "start_point": {
+              "type": "string",
+              "description": "With 'create', the commit the new branch starts from — a branch name, tag, or commit oid. Defaults to the current HEAD. Ignored without 'create'."
+            }
+          }
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "readwrite"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "oci": {
+    "registry": "ghcr.io",
+    "path": "hayward-ai/hayward-tools/git"
+  },
+  "latestVersion": "0.1.0",
+  "versions": [
+    {
+      "version": "0.1.0",
+      "contentDigest": "sha256:7e9d54d5b095ecc2340229bc01a440de624787697d207ee96f1c84e08a8b5356",
+      "manifestDigest": "sha256:82b054c66f48b6f481eb5aa72eb21c0fc11469b516cb65cef421e9ff9ac0d43d",
+      "reference": "ghcr.io/hayward-ai/hayward-tools/git:0.1.0",
+      "publishedAt": "2026-08-03T02:13:48.431Z"
+    }
+  ]
+}

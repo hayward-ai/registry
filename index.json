@@ -1,7 +1,55 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-03T00:02:51.601Z",
+  "generatedAt": "2026-08-03T02:13:57.679Z",
   "collections": [
+    {
+      "name": "@hayward/git",
+      "scope": "@hayward",
+      "kind": "tool-collection",
+      "displayName": "Git",
+      "description": "Work with Git repositories: clone a project, switch or start a branch, then review, stage, commit, and push changes.",
+      "author": "Hayward",
+      "category": "Version Control",
+      "latestVersion": "0.1.0",
+      "toolCount": 9,
+      "detail": "collections/@hayward/git.json"
+    },
+    {
+      "name": "@hayward/github",
+      "scope": "@hayward",
+      "kind": "tool-collection",
+      "displayName": "GitHub",
+      "description": "Manage work on GitHub: browse, create, and comment on issues and pull requests, and merge them when they’re ready.",
+      "author": "Hayward",
+      "category": "Version Control",
+      "latestVersion": "0.1.0",
+      "toolCount": 12,
+      "detail": "collections/@hayward/github.json"
+    },
+    {
+      "name": "@hayward/web-fetch",
+      "scope": "@hayward",
+      "kind": "tool-collection",
+      "displayName": "Web Fetch",
+      "description": "Open a web page and read its content as clean, readable text.",
+      "author": "Hayward",
+      "category": "Web",
+      "latestVersion": "0.1.0",
+      "toolCount": 1,
+      "detail": "collections/@hayward/web-fetch.json"
+    },
+    {
+      "name": "@hayward/web-search",
+      "scope": "@hayward",
+      "kind": "tool-collection",
+      "displayName": "Web Search",
+      "description": "Search the web and get back relevant, up-to-date results.",
+      "author": "Hayward",
+      "category": "Web",
+      "latestVersion": "0.1.0",
+      "toolCount": 1,
+      "detail": "collections/@hayward/web-search.json"
+    },
     {
       "name": "@hayward/workspace",
       "scope": "@hayward",
