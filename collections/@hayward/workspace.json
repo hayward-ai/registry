@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "kind": "tool-collection",
+  "name": "@hayward/workspace",
+  "scope": "@hayward",
+  "shortName": "workspace",
+  "manifest": {
+    "$schema": "https://hayward-ai.github.io/schemas/tool-manifest.schema.json",
+    "kind": "tool-collection",
+    "schemaVersion": 1,
+    "name": "@hayward/workspace",
+    "displayName": "Workspace",
+    "author": "Hayward",
+    "category": "Files",
+    "description": "Read, write, and edit files in the agent's workspace, and run shell commands over them like ls, grep, and find.",
+    "icon": "data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%20fill%3D'none'%20stroke%3D'%2371717a'%20stroke-width%3D'2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D'M20%2020a2%202%200%200%200%202-2V8a2%202%200%200%200-2-2h-7.9a2%202%200%200%201-1.69-.9L9.6%203.9A2%202%200%200%200%207.93%203H4a2%202%200%200%200-2%202v13a2%202%200%200%200%202%202Z'%2F%3E%3Cpolyline%20points%3D'7%2011%2010%2014%207%2017'%2F%3E%3Cline%20x1%3D'13'%20x2%3D'17'%20y1%3D'17'%20y2%3D'17'%2F%3E%3C%2Fsvg%3E",
+    "tools": [
+      {
+        "name": "bash_run",
+        "displayName": "Run shell command",
+        "exportName": "bash-run",
+        "description": "Run a shell command line against the workspace. Available: ls, cat, head, tail, wc, sort, uniq, cut, nl, mv, cp, touch, env (real coreutils, so standard flags like 'ls -la', 'head -n 20' work); grep (ripgrep-backed: -i, -n, -v, -c, -l, -r, -w, -F, -E); find (-name, -iname, -path, -type f|d, -maxdepth, -mindepth, -not); sed ('s///'); plus cd, pwd, echo, mkdir, rm, true, false. Globs ('*', '?', '[...]'), pipelines ('|'), ';'/'&&'/'||' sequencing, and '>'/'>>' redirection all work — except that head, tail, wc, sort, uniq, cut, nl, mv, cp and touch run only as standalone commands, not inside a pipeline or a redirect. Returns combined stdout+stderr as 'output', the last command's exit code, and the resulting cwd — pass that back as 'cwd' to persist a 'cd'.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "command"
+          ],
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "The shell command line to run, e.g. \"cat src/main.rs | grep TODO\"."
+            },
+            "cwd": {
+              "type": "string",
+              "description": "Workspace-relative working directory to run in. Defaults to the workspace root ('.'). Pass back a previous call's 'cwd' result to persist a 'cd'."
+            }
+          }
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "readwrite"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "read_file",
+        "displayName": "Read file",
+        "exportName": "read-file",
+        "description": "Read a UTF-8 text file in full, returning its contents as JSON. Fails on non-UTF-8/binary content rather than mangling it.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "path"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Workspace-relative path to read."
+            },
+            "cwd": {
+              "type": "string",
+              "description": "Directory 'path' is relative to. Defaults to the workspace root ('.')."
+            }
+          }
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "read"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "write_file",
+        "displayName": "Write file",
+        "exportName": "write-file",
+        "description": "Write text to a file, overwriting it if it exists. Creates missing parent directories first. Prefer this over an echo/redirect in bash_run, which mangles quoting and multi-line content.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "path",
+            "content"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Workspace-relative path to write."
+            },
+            "content": {
+              "type": "string",
+              "description": "Text to write, replacing any existing content."
+            },
+            "cwd": {
+              "type": "string",
+              "description": "Directory 'path' is relative to. Defaults to the workspace root ('.')."
+            }
+          }
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "readwrite"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "edit_file",
+        "displayName": "Edit file",
+        "exportName": "edit-file",
+        "description": "Replace one exact occurrence of old_string with new_string. Fails if old_string is missing or appears more than once — supply enough surrounding context to make the match unique. Prefer this over sed in bash_run, which has no uniqueness check and will silently change the wrong line.",
+        "argumentsSchema": {
+          "type": "object",
+          "required": [
+            "path",
+            "old_string",
+            "new_string"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Workspace-relative path to edit."
+            },
+            "old_string": {
+              "type": "string",
+              "description": "Exact text to replace; must occur exactly once in the file."
+            },
+            "new_string": {
+              "type": "string",
+              "description": "Text to replace old_string with."
+            },
+            "cwd": {
+              "type": "string",
+              "description": "Directory 'path' is relative to. Defaults to the workspace root ('.')."
+            }
+          }
+        },
+        "scopes": {
+          "filesystem": {
+            "enabled": true,
+            "limits": {
+              "paths": [
+                {
+                  "path": "/",
+                  "access": "readwrite"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "oci": {
+    "registry": "ghcr.io",
+    "path": "hayward-ai/hayward-tools/workspace"
+  },
+  "latestVersion": "0.2.0",
+  "versions": [
+    {
+      "version": "0.2.0",
+      "contentDigest": "sha256:c8780600d893ba8ea52bfcfde6eac4e6a37b41b1c73677bbb6045c7df545a4d2",
+      "manifestDigest": "sha256:b949525b328bf31d103ad01c5b589b9d8866981c7bc09fd63039efefc57759de",
+      "reference": "ghcr.io/hayward-ai/hayward-tools/workspace:0.2.0",
+      "publishedAt": "2026-08-02T22:20:24.198Z"
+    }
+  ]
+}

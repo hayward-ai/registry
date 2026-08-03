@@ -1,0 +1,11 @@
+{
+  "name": "@hayward/registry",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "The Hayward tool registry: a searchable index of tool collections published as OCI artifacts.",
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "test": "node --test scripts/lib/*.test.mjs"
+  }
+}
